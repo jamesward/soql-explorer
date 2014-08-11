@@ -1,9 +1,8 @@
 var apiVersion = 'v30.0',
     clientId = 'YOUR_CONSUMER_KEY_HERE',
     loginUrl = 'https://login.salesforce.com/',
-    redirectURI = "http://localhost:3000/oauthcallback.html",
-    proxyURL = 'http://localhost:3000/proxy/',
-    client = new forcetk.Client(clientId, loginUrl, proxyURL);
+    redirectURI = "http://localhost:5000/oauthcallback.html",
+    proxyURL = 'https://sfdc-cors.herokuapp.com';
 
 function login() {
     var url = loginUrl + 'services/oauth2/authorize?display=popup&response_type=token' +
@@ -14,25 +13,28 @@ function login() {
 
 function oauthCallback(response) {
     if (response && response.access_token) {
-        client.setSessionToken(response.access_token, apiVersion, response.instance_url);
+        window.salesforceToken = response.access_token;
     } else {
         alert("AuthenticationError: No Token");
     }
 }
 
 function executeQuery() {
-    if (!client.sessionId) {
+    if (!window.salesforceToken) {
         alert('You are not authenticated. Please login first.');
-        return false;
     }
-    client.query($('#query').val(),
-        function (data) {
+    else {
+      $.ajax(proxyURL + '/services/data/v30.0/query/?q=' + $('#query').val(), {
+        headers: {'Authorization': 'Bearer ' + window.salesforceToken},
+        dataType: 'json',
+        success: function (data) {
             $('#result').html(JSON.stringify(data, undefined, 3));
         },
-        function (error) {
+        error: function (error) {
             alert("Error: " + JSON.stringify(error));
-        });
-    return false;
+        }
+      });
+    }
 }
 
 $('#btn-login').click(login);
